@@ -12,7 +12,8 @@ const client = new Client({
 // and run the connect
 client.connect();
 
-exports.query = async (query) => {
-  const { rows } = await client.query(query);
+// exports directly the query method that will execute the queries in the database
+exports.query = async (query, values /* values are the values that we pass in the bindings with queries */) => {
+  const { rows } = await client.query(query, values);
   return rows;
 };

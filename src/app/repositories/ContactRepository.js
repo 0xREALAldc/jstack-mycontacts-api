@@ -22,39 +22,50 @@ let contacts = [
 class ContactController {
   // we try to keed a standard for naming the methods of a repository, but this doesn't exclude
   // the possibility to have some methods with custom names
-  findAll() {
-    return new Promise((resolve) => {
-      resolve(contacts);
-    });
+  async findAll(orderBy = 'ASC') {
+    const direction = orderBy.toUpperCase() === 'DESC' ? 'DESC' : 'ASC';
+    const rows = await db.query(`SELECT * FROM contacts ORDER BY name ${direction}`);
+
+    return rows;
   }
 
-  findById(id) {
-    return new Promise((resolve) => {
-      resolve(contacts.find((contact) => contact.id === id));
-    });
+  async findById(id) {
+    const [row] = await db.query(
+      `
+      SELECT * FROM contacts
+      WHERE id = $1`,
+      [id],
+    );
+
+    return row;
   }
 
-  findByEmail(email) {
-    return new Promise((resolve) => {
-      resolve(contacts.find((contact) => contact.email === email));
-    });
+  async findByEmail(email) {
+    const [row] = await db.query(
+      `
+      SELECT * FROM contacts
+      WHERE email = $1`,
+      [email],
+    );
+
+    return row;
   }
 
-  create({
+  async create({
     name, email, phone, category_id,
   }) {
-    return new Promise((resolve) => {
-      const newContact = {
-        id: v4(),
-        name,
-        email,
-        phone,
-        category_id,
-      };
+    // as the db.query(..) returns an array of `rows` we will destruct the array (using the variable 'row' inside the brackets [row])
+    // to get the first position of the array and set him to the `row` variable
+    const [row] = await db.query(
+      `
+     INSERT INTO contacts (name, email, phone, category_id)
+     VALUES($1, $2, $3, $4)
+     RETURNING *`, // we use the RETURNING * keyword to return all the fields from the table, we could choose only the ones that we want too
+      [name, email, phone, category_id], // to protect our query from SQL Injection, we use the
+      // bindings to pass the values from the variables to the query
+    );
 
-      contacts.push(newContact);
-      resolve(newContact);
-    });
+    return row;
   }
 
   update(id, {
