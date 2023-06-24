@@ -1,30 +1,15 @@
-const { v4 } = require('uuid');
-
 const db = require('../../database');
 
-let contacts = [
-  {
-    id: v4(),
-    name: 'Andre Luiz',
-    email: 'andre@mail.com',
-    phone: '2312983128',
-    category_id: v4(),
-  },
-  {
-    id: v4(),
-    name: 'Juca Bala',
-    email: 'juca@mail.com',
-    phone: '129321939',
-    category_id: v4(),
-  },
-];
-
-class ContactController {
+class ContactRepository {
   // we try to keed a standard for naming the methods of a repository, but this doesn't exclude
   // the possibility to have some methods with custom names
   async findAll(orderBy = 'ASC') {
     const direction = orderBy.toUpperCase() === 'DESC' ? 'DESC' : 'ASC';
-    const rows = await db.query(`SELECT * FROM contacts ORDER BY name ${direction}`);
+    const rows = await db.query(`
+      SELECT contacts.*, categories.name AS category_name
+      FROM contacts
+      LEFT JOIN categories on categories.id = contacts.category_id
+      ORDER BY contacts.name ${direction}`);
 
     return rows;
   }
@@ -32,8 +17,10 @@ class ContactController {
   async findById(id) {
     const [row] = await db.query(
       `
-      SELECT * FROM contacts
-      WHERE id = $1`,
+      SELECT contacts.*, categories.name AS category_name
+      FROM contacts
+      LEFT JOIN categories on categories.id = contacts.category_id
+      WHERE contacts.id = $1`,
       [id],
     );
 
@@ -68,31 +55,31 @@ class ContactController {
     return row;
   }
 
-  update(id, {
+  async update(id, {
     name, email, phone, category_id,
   }) {
-    return new Promise((resolve) => {
-      const updatedContact = {
-        id,
-        name,
-        email,
-        phone,
-        category_id,
-      };
+    const [row] = await db.query(
+      `
+      UPDATE contacts
+      SET name = $1, email = $2, phone = $3, category_id = $4
+      WHERE id = $5
+      RETURNING *`,
+      [name, email, phone, category_id, id],
+    );
 
-      contacts = contacts.map((contact) => (
-        contact.id === id ? updatedContact : contact
-      ));
-      resolve(updatedContact);
-    });
+    return row;
   }
 
-  delete(id) {
-    return new Promise((resolve) => {
-      contacts = contacts.filter((contact) => contact.id !== id);
-      resolve();
-    });
+  async delete(id) {
+    const deleteOp = await db.query(
+      `
+      DELETE FROM contacts
+      WHERE id = $1`,
+      [id],
+    );
+
+    return deleteOp;
   }
 }
 
-module.exports = new ContactController();
+module.exports = new ContactRepository();
