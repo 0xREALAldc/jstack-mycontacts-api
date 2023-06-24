@@ -14,5 +14,7 @@ module.exports = {
     'consistent-return': 'off',
     camelcase: 'off',
     'max-len': 'off',
+    // disables this rule only for the variables named as 'next'
+    'no-unused-vars': ['error', { argsIgnorePattern: 'next' }],
   },
 };
